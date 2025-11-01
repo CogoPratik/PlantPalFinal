@@ -1,0 +1,7 @@
+{
+  "name": "Plant Pal Main",
+  "description": "A personal plant care companion application landing page, designed to help users keep their houseplants thriving with smart reminders, AI-powered care tips, and personalized schedules.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
