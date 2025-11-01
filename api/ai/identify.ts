@@ -1,14 +1,14 @@
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 
 export const config = {
-  runtime: 'nodejs',
+  runtime: 'edge',
 };
 
-// IMPORTANT: Set the API_KEY in your Vercel project settings
-const apiKey = process.env.API_KEY;
-const ai = apiKey ? new GoogleGenAI({apiKey}) : null;
+// WARNING: Hardcoding API keys is not secure.
+// This key is provided for demonstration purposes based on the user's request.
+// For production, it's highly recommended to use environment variables.
+const OPENROUTER_API_KEY = "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";
+const API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-// FIX: Replaced Node.js Buffer with Uint8Array and a helper function to avoid type errors in some environments.
 // Helper to convert stream to Uint8Array
 async function streamToUint8Array(stream: ReadableStream): Promise<Uint8Array> {
     const reader = stream.getReader();
@@ -18,7 +18,6 @@ async function streamToUint8Array(stream: ReadableStream): Promise<Uint8Array> {
         if (done) break;
         chunks.push(value);
     }
-
     const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
     const result = new Uint8Array(totalLength);
     let offset = 0;
@@ -29,6 +28,7 @@ async function streamToUint8Array(stream: ReadableStream): Promise<Uint8Array> {
     return result;
 }
 
+// Helper to convert Uint8Array to Base64
 function uint8ArrayToBase64(bytes: Uint8Array): string {
     let binary = '';
     const len = bytes.byteLength;
@@ -38,15 +38,7 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
     return btoa(binary);
 }
 
-
 export default async function handler(req: Request) {
-  if (!ai) {
-    return new Response(JSON.stringify({ error: 'The AI provider is not configured. Please set the API_KEY environment variable in your Vercel project settings.' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-    });
-  }
-  
   if (req.method === 'POST') {
     try {
         const formData = await req.formData();
@@ -59,25 +51,39 @@ export default async function handler(req: Request) {
         const imageBytes = await streamToUint8Array(imageFile.stream());
         const base64Image = uint8ArrayToBase64(imageBytes);
         const mimeType = imageFile.type;
+        const dataUri = `data:${mimeType};base64,${base64Image}`;
 
-        const imagePart = {
-            inlineData: {
-                data: base64Image,
-                mimeType,
+        const promptText = "Identify the plant in this image. Provide its common name and scientific name. Also provide a confidence score from 0 to 100 for your identification. Respond with only a JSON object in the format: {\"name\": \"Common Name (Scientific Name)\", \"match\": 95}";
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://plantpal.ai',
+                'X-Title': 'Plant Pal',
             },
-        };
-
-        const textPart = {
-            text: "Identify the plant in this image. Provide its common name and scientific name. Also provide a confidence score from 0 to 100 for your identification. Respond with only a JSON object in the format: {\"name\": \"Common Name (Scientific Name)\", \"match\": 95}",
-        };
-        
-        const response: GenerateContentResponse = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: { parts: [imagePart, textPart] },
+            body: JSON.stringify({
+                model: 'google/gemini-flash-1.5',
+                messages: [{
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: promptText },
+                        { type: 'image_url', image_url: { url: dataUri } }
+                    ]
+                }],
+                response_format: { "type": "json_object" }
+            }),
         });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`OpenRouter API responded with status ${response.status}: ${errorBody}`);
+        }
         
-        const text = response.text.replace(/```json|```/g, '').trim();
-        const result = JSON.parse(text);
+        const completion = await response.json();
+        const resultText = completion.choices[0].message.content;
+        const result = JSON.parse(resultText);
 
         return new Response(JSON.stringify(result), {
             status: 200,
@@ -85,7 +91,7 @@ export default async function handler(req: Request) {
         });
 
     } catch (error: any) {
-        console.error("Error identifying plant with Gemini:", error);
+        console.error("Error identifying plant with OpenRouter:", error);
         return new Response(JSON.stringify({ error: 'Failed to identify plant', details: error.message }), { status: 500 });
     }
   }

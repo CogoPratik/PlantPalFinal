@@ -1,15 +1,17 @@
-import { GoogleGenAI, Type } from "@google/genai";
+
 import { Plant } from "../../components/Dashboard";
 
 export const config = {
-  runtime: 'nodejs',
+  runtime: 'edge',
 };
 
-// IMPORTANT: Set the API_KEY in your Vercel project settings
-const apiKey = process.env.API_KEY;
-const ai = apiKey ? new GoogleGenAI({apiKey}) : null;
+// WARNING: Hardcoding API keys is not secure.
+// This key is provided for demonstration purposes based on the user's request.
+// For production, it's highly recommended to use environment variables.
+const OPENROUTER_API_KEY = "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";
+const API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-// FIX: Replaced Node.js Buffer with Uint8Array and a helper function to avoid type errors in some environments.
+// Helper to convert stream to Uint8Array
 async function streamToUint8Array(stream: ReadableStream): Promise<Uint8Array> {
     const reader = stream.getReader();
     const chunks: Uint8Array[] = [];
@@ -18,7 +20,6 @@ async function streamToUint8Array(stream: ReadableStream): Promise<Uint8Array> {
         if (done) break;
         chunks.push(value);
     }
-    
     const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
     const result = new Uint8Array(totalLength);
     let offset = 0;
@@ -29,6 +30,7 @@ async function streamToUint8Array(stream: ReadableStream): Promise<Uint8Array> {
     return result;
 }
 
+// Helper to convert Uint8Array to Base64
 function uint8ArrayToBase64(bytes: Uint8Array): string {
     let binary = '';
     const len = bytes.byteLength;
@@ -39,13 +41,6 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
 }
 
 export default async function handler(req: Request) {
-  if (!ai) {
-    return new Response(JSON.stringify({ error: 'The AI provider is not configured. Please set the API_KEY environment variable in your Vercel project settings.' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
   if (req.method === 'POST') {
     try {
         const formData = await req.formData();
@@ -58,34 +53,39 @@ export default async function handler(req: Request) {
         const imageBytes = await streamToUint8Array(imageFile.stream());
         const base64Image = uint8ArrayToBase64(imageBytes);
         const mimeType = imageFile.type;
-        
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: {
-                parts: [
-                    { inlineData: { data: base64Image, mimeType } },
-                    { text: "Based on this image of a plant, provide care details. Give a common name and scientific name." }
-                ]
+        const dataUri = `data:${mimeType};base64,${base64Image}`;
+
+        const promptText = `Based on this image of a plant, provide care details. Respond with a JSON object containing: scientificName (string), wateringFrequency (integer, in days), fertilizingFrequency (integer, in days), sunlight (enum: "Low Light", "Medium Light", "Bright Light"), humidity (enum: "Low Humidity", "Medium Humidity", "High Humidity"), and notes (string, a brief care tip).`;
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://plantpal.ai',
+                'X-Title': 'Plant Pal',
             },
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        scientificName: { type: Type.STRING },
-                        wateringFrequency: { type: Type.INTEGER, description: "Average number of days between watering." },
-                        fertilizingFrequency: { type: Type.INTEGER, description: "Average number of days between fertilizing." },
-                        sunlight: { type: Type.STRING, enum: ["Low Light", "Medium Light", "Bright Light"] },
-                        humidity: { type: Type.STRING, enum: ["Low Humidity", "Medium Humidity", "High Humidity"] },
-                        notes: { type: Type.STRING, description: "A brief, helpful care tip for this plant." }
-                    },
-                    required: ["scientificName", "wateringFrequency", "sunlight", "notes"]
-                },
-            },
+            body: JSON.stringify({
+                model: 'google/gemini-flash-1.5',
+                messages: [{
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: promptText },
+                        { type: 'image_url', image_url: { url: dataUri } }
+                    ]
+                }],
+                response_format: { "type": "json_object" }
+            }),
         });
-        
-        const text = response.text.trim();
-        const details: Partial<Plant> = JSON.parse(text);
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`OpenRouter API responded with status ${response.status}: ${errorBody}`);
+        }
+
+        const completion = await response.json();
+        const resultText = completion.choices[0].message.content;
+        const details: Partial<Plant> = JSON.parse(resultText);
 
         return new Response(JSON.stringify(details), {
             status: 200,
