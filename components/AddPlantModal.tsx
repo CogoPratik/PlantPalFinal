@@ -18,10 +18,10 @@ const AddPlantModal: React.FC<AddPlantModalProps> = ({ isOpen, onClose, onAddPla
   const [autoFillError, setAutoFillError] = useState<string | null>(null);
   const [plantData, setPlantData] = useState({
       name: '',
-      scientificName: '',
+      scientific_name: '',
       location: '',
-      wateringFrequency: 7,
-      fertilizingFrequency: 30,
+      watering_frequency: 7,
+      fertilizing_frequency: 30,
       sunlight: 'Medium Light',
       humidity: 'Medium Humidity',
       notes: ''
@@ -46,10 +46,10 @@ const AddPlantModal: React.FC<AddPlantModalProps> = ({ isOpen, onClose, onAddPla
         setAutoFillError(null);
         setPlantData({
             name: '',
-            scientificName: '',
+            scientific_name: '',
             location: '',
-            wateringFrequency: 7,
-            fertilizingFrequency: 30,
+            watering_frequency: 7,
+            fertilizing_frequency: 30,
             sunlight: 'Medium Light',
             humidity: 'Medium Humidity',
             notes: ''
@@ -69,7 +69,7 @@ const AddPlantModal: React.FC<AddPlantModalProps> = ({ isOpen, onClose, onAddPla
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setPlantData(prev => ({...prev, [name]: name.endsWith('Frequency') ? parseInt(value, 10) : value }));
+    setPlantData(prev => ({...prev, [name]: name.endsWith('frequency') ? parseInt(value, 10) : value }));
   };
 
   const handleFileSelect = (file: File) => {
@@ -115,10 +115,10 @@ const AddPlantModal: React.FC<AddPlantModalProps> = ({ isOpen, onClose, onAddPla
         
         setPlantData(prev => ({
             ...prev,
-            name: prev.name || (aiData.scientificName ? aiData.scientificName.split(' ')[0] : ''),
-            scientificName: aiData.scientificName || prev.scientificName,
-            wateringFrequency: aiData.wateringFrequency || prev.wateringFrequency,
-            fertilizingFrequency: aiData.fertilizingFrequency || prev.fertilizingFrequency,
+            name: prev.name || (aiData.scientific_name ? aiData.scientific_name.split(' ')[0] : ''),
+            scientific_name: aiData.scientific_name || prev.scientific_name,
+            watering_frequency: aiData.watering_frequency || prev.watering_frequency,
+            fertilizing_frequency: aiData.fertilizing_frequency || prev.fertilizing_frequency,
             sunlight: aiData.sunlight || prev.sunlight,
             humidity: aiData.humidity || prev.humidity,
             notes: aiData.notes || prev.notes,
@@ -231,8 +231,8 @@ const AddPlantModal: React.FC<AddPlantModalProps> = ({ isOpen, onClose, onAddPla
                     <input type="text" id="name" name="name" value={plantData.name} onChange={handleChange} required className={inputClasses} placeholder="e.g., Monstera"/>
                 </div>
                 <div>
-                    <label htmlFor="scientificName" className={labelClasses}>Scientific Name</label>
-                    <input type="text" id="scientificName" name="scientificName" value={plantData.scientificName} onChange={handleChange} className={inputClasses} placeholder="e.g., Monstera deliciosa"/>
+                    <label htmlFor="scientific_name" className={labelClasses}>Scientific Name</label>
+                    <input type="text" id="scientific_name" name="scientific_name" value={plantData.scientific_name} onChange={handleChange} className={inputClasses} placeholder="e.g., Monstera deliciosa"/>
                 </div>
             </div>
 
@@ -248,12 +248,12 @@ const AddPlantModal: React.FC<AddPlantModalProps> = ({ isOpen, onClose, onAddPla
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
-                    <label htmlFor="wateringFrequency" className={labelClasses}>Watering Frequency (days) *</label>
-                    <input type="number" id="wateringFrequency" name="wateringFrequency" value={plantData.wateringFrequency} onChange={handleChange} required className={inputClasses}/>
+                    <label htmlFor="watering_frequency" className={labelClasses}>Watering Frequency (days) *</label>
+                    <input type="number" id="watering_frequency" name="watering_frequency" value={plantData.watering_frequency} onChange={handleChange} required className={inputClasses}/>
                 </div>
                  <div>
-                    <label htmlFor="fertilizingFrequency" className={labelClasses}>Fertilizing Frequency (days)</label>
-                    <input type="number" id="fertilizingFrequency" name="fertilizingFrequency" value={plantData.fertilizingFrequency} onChange={handleChange} className={inputClasses}/>
+                    <label htmlFor="fertilizing_frequency" className={labelClasses}>Fertilizing Frequency (days)</label>
+                    <input type="number" id="fertilizing_frequency" name="fertilizing_frequency" value={plantData.fertilizing_frequency} onChange={handleChange} className={inputClasses}/>
                 </div>
             </div>
 

@@ -1,10 +1,11 @@
 import { GoogleGenAI } from "@google/genai";
+import { withAuth } from "../../lib/auth";
 
 export const config = {
   runtime: 'edge',
 };
 
-export default async function handler(req: Request) {
+const handler = async (req: Request, context: { userId: string }) => {
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
   }
@@ -60,3 +61,5 @@ export default async function handler(req: Request) {
     });
   }
 }
+
+export default withAuth(handler);

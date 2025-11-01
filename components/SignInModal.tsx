@@ -2,11 +2,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import { LogoIcon, CloseIcon, UserIcon, EmailIcon, LockIcon, GoogleIcon, GithubIcon, TrialSparkleIcon } from '../constants';
 import { signIn, signUp } from '../lib/api';
 
+interface User {
+  id: string;
+  email?: string;
+  user_metadata: {
+    fullname?: string;
+  };
+}
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialMode: 'signin' | 'signup';
-  onLoginSuccess: (token: string) => void;
+  onLoginSuccess: (token: string, user: User) => void;
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onLoginSuccess }) => {
@@ -65,7 +72,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMode, onL
         });
       }
       
-      onLoginSuccess(response.token);
+      onLoginSuccess(response.token, response.user);
 
     } catch (err: any) {
       setError(err.message || 'Failed to authenticate. Please try again.');

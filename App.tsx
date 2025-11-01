@@ -13,16 +13,34 @@ import Footer from './components/Footer';
 import AuthModal from './components/SignInModal';
 import Dashboard from './components/Dashboard';
 
+interface User {
+  id: string;
+  email?: string;
+  user_metadata: {
+    fullname?: string;
+  };
+}
+
 const App: React.FC = () => {
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Check for a token in localStorage on initial load
+    // Check for a token and user in localStorage on initial load
     const storedToken = localStorage.getItem('authToken');
-    if (storedToken) {
+    const storedUser = localStorage.getItem('user');
+    if (storedToken && storedUser) {
       setAuthToken(storedToken);
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+        // Clear corrupted data
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+      }
     }
   }, []);
 
@@ -32,19 +50,23 @@ const App: React.FC = () => {
   };
   const closeAuthModal = () => setAuthModalOpen(false);
 
-  const handleLoginSuccess = (token: string) => {
+  const handleLoginSuccess = (token: string, loggedInUser: User) => {
     localStorage.setItem('authToken', token);
+    localStorage.setItem('user', JSON.stringify(loggedInUser));
     setAuthToken(token);
+    setUser(loggedInUser);
     closeAuthModal();
   };
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
     setAuthToken(null);
+    setUser(null);
   };
 
-  if (authToken) {
-    return <Dashboard onLogout={handleLogout} token={authToken} />;
+  if (authToken && user) {
+    return <Dashboard onLogout={handleLogout} token={authToken} user={user} />;
   }
 
   return (

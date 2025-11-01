@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { Plant } from "../../components/Dashboard";
+import { withAuth } from "../../lib/auth";
 
 export const config = {
   runtime: 'edge',
@@ -33,7 +33,7 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
     return btoa(binary);
 }
 
-export default async function handler(req: Request) {
+const handler = async (req: Request, context: { userId: string }) => {
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
   }
@@ -60,7 +60,7 @@ export default async function handler(req: Request) {
     const ai = new GoogleGenAI({ apiKey });
 
     const textPart = {
-      text: `Based on this image of a plant, provide care details as a JSON object. The JSON object must have the following keys: "scientificName" (string), "wateringFrequency" (integer, in days), "fertilizingFrequency" (integer, in days), "sunlight" (string, one of "Low Light", "Medium Light", "Bright Light"), "humidity" (string, one of "Low Humidity", "Medium Humidity", "High Humidity"), and "notes" (string, a brief care tip).`
+      text: `Based on this image of a plant, provide care details as a JSON object. The JSON object must have the following keys: "scientific_name" (string), "watering_frequency" (integer, in days), "fertilizing_frequency" (integer, in days), "sunlight" (string, one of "Low Light", "Medium Light", "Bright Light"), "humidity" (string, one of "Low Humidity", "Medium Humidity", "High Humidity"), and "notes" (string, a brief care tip).`
     };
 
     const imagePart = {
@@ -78,7 +78,7 @@ export default async function handler(req: Request) {
       }
     });
 
-    const details: Partial<Plant> = JSON.parse(response.text);
+    const details = JSON.parse(response.text);
 
     return new Response(JSON.stringify(details), {
         status: 200,
@@ -90,3 +90,5 @@ export default async function handler(req: Request) {
     return new Response(JSON.stringify({ error: 'Failed to auto-fill details', details: error.message }), { status: 500 });
   }
 }
+
+export default withAuth(handler);

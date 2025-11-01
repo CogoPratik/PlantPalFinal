@@ -1,43 +1,56 @@
-import { mockPlants } from '../../_data';
+import { supabase } from '../../../lib/supabase';
+import { withAuth } from '../../../lib/auth';
 
 export const config = {
   runtime: 'edge',
 };
 
-export default async function handler(req: Request) {
+const handler = async (req: Request, context: { userId: string }) => {
+    const { userId } = context;
     const { method } = req;
     const url = new URL(req.url);
-    const id = parseInt(url.pathname.split('/')[3] || '', 10);
-    
-    const plantIndex = mockPlants.findIndex(p => p.id === id);
+    const id = url.pathname.split('/')[3];
 
-    if (plantIndex === -1) {
-        return new Response(JSON.stringify({ message: 'Plant not found' }), { status: 404 });
+    if (!id) {
+        return new Response(JSON.stringify({ message: 'Plant ID is required' }), { status: 400 });
     }
-    
+
     if (method === 'POST') {
         try {
             const { activity } = await req.json();
             const today = new Date().toISOString();
             
+            let updateData = {};
             if (activity === 'water') {
-                mockPlants[plantIndex].lastWatered = today;
+                updateData = { last_watered: today };
             } else if (activity === 'fertilize') {
-                mockPlants[plantIndex].lastFertilized = today;
+                updateData = { last_fertilized: today };
             } else if (activity === 'groom') {
-                mockPlants[plantIndex].lastGroomed = today;
+                updateData = { last_groomed: today };
             } else {
                 return new Response(JSON.stringify({ message: 'Invalid activity' }), { status: 400 });
             }
             
-            return new Response(JSON.stringify(mockPlants[plantIndex]), {
+            const { data, error } = await supabase
+                .from('plants')
+                .update(updateData)
+                .eq('id', id)
+                .eq('user_id', userId)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            return new Response(JSON.stringify(data), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' },
             });
-        } catch (error) {
-            return new Response(JSON.stringify({ message: 'Error updating activity' }), { status: 500 });
+        } catch (error: any) {
+            return new Response(JSON.stringify({ message: error.message }), { status: 500 });
         }
     }
 
     return new Response('Method Not Allowed', { status: 405 });
-}
+};
+
+export default withAuth(handler);

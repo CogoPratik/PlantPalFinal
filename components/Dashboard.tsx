@@ -4,9 +4,17 @@ import AddPlantModal from './AddPlantModal';
 import AiAssistant from './AiAssistant';
 import { getPlants, addPlant, deletePlant, updatePlant, updatePlantActivity, getJournalEntries, addJournalEntry, deleteJournalEntry, getArticles, getFertilizerSuggestion } from '../lib/api';
 
+interface User {
+  id: string;
+  email?: string;
+  user_metadata: {
+    fullname?: string;
+  };
+}
 interface DashboardProps {
     onLogout: () => void;
     token: string;
+    user: User;
 }
 
 const addDays = (date: string, days: number): Date => {
@@ -27,21 +35,21 @@ const formatDate = (date: Date | string): string => {
 export interface Plant {
     id: number | string;
     name: string;
-    scientificName: string;
-    image: string;
+    scientific_name: string;
+    image_url: string;
     light: string;
     health: 'healthy' | 'attention';
     location: string;
-    wateringFrequency: number;
-    lastWatered: string;
-    fertilizingFrequency: number;
-    lastFertilized: string;
-    groomingFrequency: number;
-    lastGroomed: string;
+    watering_frequency: number;
+    last_watered: string;
+    fertilizing_frequency: number;
+    last_fertilized: string;
+    grooming_frequency: number;
+    last_groomed: string;
     sunlight: string;
     humidity: string;
     notes: string;
-    fertilizerDetails?: string;
+    fertilizer_details?: string;
 }
 
 export interface Article {
@@ -59,12 +67,10 @@ export interface JournalEntry {
     id: number | string;
     title: string;
     content: string;
-    date: string;
-    file?: {
-        name: string;
-        type: 'image' | 'pdf';
-        url: string; 
-    };
+    created_at: string;
+    file_url?: string;
+    file_type?: 'image' | 'pdf';
+    file_name?: string;
 }
 
 
@@ -202,9 +208,9 @@ const PlantCard: React.FC<{ plant: Plant; onViewDetails: (plant: Plant) => void;
         return d;
     }, []);
 
-    const nextWateringDate = useMemo(() => addDays(plant.lastWatered, plant.wateringFrequency), [plant.lastWatered, plant.wateringFrequency]);
-    const nextFertilizingDate = useMemo(() => addDays(plant.lastFertilized, plant.fertilizingFrequency), [plant.lastFertilized, plant.fertilizingFrequency]);
-    const nextGroomingDate = useMemo(() => addDays(plant.lastGroomed, plant.groomingFrequency), [plant.lastGroomed, plant.groomingFrequency]);
+    const nextWateringDate = useMemo(() => addDays(plant.last_watered, plant.watering_frequency), [plant.last_watered, plant.watering_frequency]);
+    const nextFertilizingDate = useMemo(() => addDays(plant.last_fertilized, plant.fertilizing_frequency), [plant.last_fertilized, plant.fertilizing_frequency]);
+    const nextGroomingDate = useMemo(() => addDays(plant.last_groomed, plant.grooming_frequency), [plant.last_groomed, plant.grooming_frequency]);
     
     const needsWater = nextWateringDate <= today;
     const needsFertilizer = nextFertilizingDate <= today;
@@ -226,7 +232,7 @@ const PlantCard: React.FC<{ plant: Plant; onViewDetails: (plant: Plant) => void;
             onClick={() => onViewDetails(plant)}
         >
             <div className="relative">
-                <img src={plant.image} alt={plant.name} className="w-full h-48 object-cover" />
+                <img src={plant.image_url} alt={plant.name} className="w-full h-48 object-cover" />
                 <div className="absolute top-3 left-3 flex flex-col space-y-1.5">
                     {needsWater && <ReminderBadge icon={<WaterDropIcon className="h-4 w-4" />} text="Water me!" color="bg-blue-500" />}
                     {needsFertilizer && <ReminderBadge icon={<FertilizerIcon className="h-4 w-4" />} text="Fertilise me!" color="bg-orange-500" />}
@@ -243,7 +249,7 @@ const PlantCard: React.FC<{ plant: Plant; onViewDetails: (plant: Plant) => void;
             </div>
             <div className="p-4 flex flex-col flex-grow">
                 <h3 className="text-lg font-bold text-plant-dark">{plant.name}</h3>
-                <p className="text-sm text-plant-gray mb-4 flex-grow">{plant.scientificName}</p>
+                <p className="text-sm text-plant-gray mb-4 flex-grow">{plant.scientific_name}</p>
                 
                 <div className="grid grid-cols-3 gap-2 mt-auto pt-4 border-t border-gray-100">
                     <ActionButton icon={<WaterDropIcon className="h-4 w-4" />} label="Watered" onClick={(e) => handleActionClick(e, plant.id, 'water')} />
@@ -291,7 +297,7 @@ const PlantDetailsModal: React.FC<{ plant: Plant | null; isOpen: boolean; onClos
         try {
           const { suggestion } = await getFertilizerSuggestion({
               name: editablePlant.name,
-              scientificName: editablePlant.scientificName,
+              scientificName: editablePlant.scientific_name,
           }, token);
           setAiFertilizerNote(suggestion);
 
@@ -308,9 +314,9 @@ const PlantDetailsModal: React.FC<{ plant: Plant | null; isOpen: boolean; onClos
         onClose();
     };
 
-    const nextWateringDate = addDays(editablePlant.lastWatered, editablePlant.wateringFrequency);
-    const nextFertilizingDate = addDays(editablePlant.lastFertilized, editablePlant.fertilizingFrequency);
-    const nextGroomingDate = addDays(editablePlant.lastGroomed, editablePlant.groomingFrequency);
+    const nextWateringDate = addDays(editablePlant.last_watered, editablePlant.watering_frequency);
+    const nextFertilizingDate = addDays(editablePlant.last_fertilized, editablePlant.fertilizing_frequency);
+    const nextGroomingDate = addDays(editablePlant.last_groomed, editablePlant.grooming_frequency);
     
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity duration-300 animate-fade-in" onClick={handleOverlayClick}>
@@ -318,25 +324,25 @@ const PlantDetailsModal: React.FC<{ plant: Plant | null; isOpen: boolean; onClos
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10 p-2 rounded-full bg-white/50 hover:bg-white/80">
                     <CloseIcon className="h-6 w-6" />
                 </button>
-                <img src={editablePlant.image} alt={editablePlant.name} className="w-full h-64 object-cover rounded-t-2xl" />
+                <img src={editablePlant.image_url} alt={editablePlant.name} className="w-full h-64 object-cover rounded-t-2xl" />
                 <div className="p-8">
                     <h2 className="text-3xl font-bold text-plant-dark">{editablePlant.name}</h2>
-                    <p className="text-lg text-plant-gray italic mb-6">{editablePlant.scientificName}</p>
+                    <p className="text-lg text-plant-gray italic mb-6">{editablePlant.scientific_name}</p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-8">
                         <DetailItem icon={<LocationIcon className="h-6 w-6" />} label="Location" value={editablePlant.location} />
                         <DetailItem icon={<SunIcon className="h-6 w-6" />} label="Sunlight" value={editablePlant.sunlight} />
-                        <DetailItem icon={<WaterDropIcon className="h-6 w-6" />} label="Watering Frequency" value={`Every ${editablePlant.wateringFrequency} days`} />
-                        <DetailItem icon={<FertilizerIcon className="h-6 w-6" />} label="Fertilizing Frequency" value={`Every ${editablePlant.fertilizingFrequency} days`} />
-                        <DetailItem icon={<GroomIcon className="h-6 w-6" />} label="Grooming Frequency" value={`Every ${editablePlant.groomingFrequency} days`} />
+                        <DetailItem icon={<WaterDropIcon className="h-6 w-6" />} label="Watering Frequency" value={`Every ${editablePlant.watering_frequency} days`} />
+                        <DetailItem icon={<FertilizerIcon className="h-6 w-6" />} label="Fertilizing Frequency" value={`Every ${editablePlant.fertilizing_frequency} days`} />
+                        <DetailItem icon={<GroomIcon className="h-6 w-6" />} label="Grooming Frequency" value={`Every ${editablePlant.grooming_frequency} days`} />
                         <DetailItem icon={<CalendarIcon className="h-6 w-6" />} label="Humidity" value={editablePlant.humidity} />
                     </div>
 
                     <h3 className="text-xl font-bold text-plant-dark mt-8 mb-4">Care Schedule</h3>
                     <div className="space-y-3 bg-plant-gray-light p-4 rounded-lg">
-                        <ActivityDetail icon={<WaterDropIcon className="h-5 w-5" />} label="Water" last={formatDate(new Date(editablePlant.lastWatered))} next={formatDate(nextWateringDate)} />
-                        <ActivityDetail icon={<FertilizerIcon className="h-5 w-5" />} label="Fertilize" last={formatDate(new Date(editablePlant.lastFertilized))} next={formatDate(nextFertilizingDate)} />
-                        <ActivityDetail icon={<GroomIcon className="h-5 w-5" />} label="Groom" last={formatDate(new Date(editablePlant.lastGroomed))} next={formatDate(nextGroomingDate)} />
+                        <ActivityDetail icon={<WaterDropIcon className="h-5 w-5" />} label="Water" last={formatDate(new Date(editablePlant.last_watered))} next={formatDate(nextWateringDate)} />
+                        <ActivityDetail icon={<FertilizerIcon className="h-5 w-5" />} label="Fertilize" last={formatDate(new Date(editablePlant.last_fertilized))} next={formatDate(nextFertilizingDate)} />
+                        <ActivityDetail icon={<GroomIcon className="h-5 w-5" />} label="Groom" last={formatDate(new Date(editablePlant.last_groomed))} next={formatDate(nextGroomingDate)} />
                     </div>
 
                     <h3 className="text-xl font-bold text-plant-dark mt-8 mb-4">Fertilizer Details</h3>
@@ -349,8 +355,8 @@ const PlantDetailsModal: React.FC<{ plant: Plant | null; isOpen: boolean; onClos
                             rows={3}
                             className="w-full p-2 border border-gray-300 rounded-md focus:ring-plant-green focus:border-plant-green"
                             placeholder="e.g., Use Miracle-Gro every 2nd watering during spring."
-                            value={editablePlant.fertilizerDetails || ''}
-                            onChange={(e) => setEditablePlant({ ...editablePlant, fertilizerDetails: e.target.value })}
+                            value={editablePlant.fertilizer_details || ''}
+                            onChange={(e) => setEditablePlant({ ...editablePlant, fertilizer_details: e.target.value })}
                         />
                         <button
                             type="button"
@@ -367,7 +373,7 @@ const PlantDetailsModal: React.FC<{ plant: Plant | null; isOpen: boolean; onClos
                                 <p className="text-sm font-semibold text-plant-purple-dark">AI Suggestion:</p>
                                 <p className="text-sm text-plant-dark mt-1">{aiFertilizerNote}</p>
                                 <button
-                                    onClick={() => setEditablePlant({ ...editablePlant, fertilizerDetails: aiFertilizerNote })}
+                                    onClick={() => setEditablePlant({ ...editablePlant, fertilizer_details: aiFertilizerNote })}
                                     className="mt-2 text-xs font-bold text-plant-purple-dark hover:underline"
                                 >
                                     Use this suggestion
@@ -469,21 +475,21 @@ const ViewJournalEntryModal: React.FC<{ entry: JournalEntry | null, isOpen: bool
                     <div className="flex justify-between items-start">
                         <div>
                             <h2 className="text-3xl font-bold text-plant-dark">{entry.title}</h2>
-                            <p className="text-sm text-plant-gray mt-1">{formatDate(entry.date)}</p>
+                            <p className="text-sm text-plant-gray mt-1">{formatDate(entry.created_at)}</p>
                         </div>
                          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><CloseIcon className="h-6 w-6" /></button>
                     </div>
                     <p className="mt-6 text-plant-dark whitespace-pre-wrap">{entry.content}</p>
                 </div>
-                {entry.file && entry.file.type === 'image' && (
-                    <img src={entry.file.url} alt="Journal attachment" className="w-full object-cover rounded-b-2xl" />
+                {entry.file_url && entry.file_type === 'image' && (
+                    <img src={entry.file_url} alt="Journal attachment" className="w-full object-cover rounded-b-2xl" />
                 )}
-                 {entry.file && entry.file.type === 'pdf' && (
+                 {entry.file_url && entry.file_type === 'pdf' && (
                     <div className="p-8 bg-gray-50 rounded-b-2xl">
-                        <a href={entry.file.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                        <a href={entry.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
                             <JournalIcon className="h-8 w-8 text-red-500"/>
                             <div>
-                                <p className="font-semibold text-plant-dark">{entry.file.name}</p>
+                                <p className="font-semibold text-plant-dark">{entry.file_name}</p>
                                 <p className="text-sm text-red-500 hover:underline">View PDF</p>
                             </div>
                         </a>
@@ -524,17 +530,17 @@ const JournalTab: React.FC<{
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {entries.map(entry => (
                              <div key={entry.id} className="bg-gray-50 rounded-xl p-5 group relative">
-                                {entry.file && entry.file.type === 'image' && (
-                                     <img src={entry.file.url} alt="thumbnail" className="w-full h-32 object-cover rounded-lg mb-4"/>
+                                {entry.file_url && entry.file_type === 'image' && (
+                                     <img src={entry.file_url} alt="thumbnail" className="w-full h-32 object-cover rounded-lg mb-4"/>
                                 )}
-                                {entry.file && entry.file.type === 'pdf' && (
+                                {entry.file_url && entry.file_type === 'pdf' && (
                                     <div className="flex items-center gap-3 bg-white p-3 rounded-lg mb-4 border">
                                         <JournalIcon className="h-6 w-6 text-red-500 flex-shrink-0"/>
-                                        <p className="text-sm text-plant-gray truncate">{entry.file.name}</p>
+                                        <p className="text-sm text-plant-gray truncate">{entry.file_name}</p>
                                     </div>
                                 )}
                                 <h3 className="font-bold text-plant-dark truncate">{entry.title}</h3>
-                                <p className="text-xs text-plant-gray mb-3">{formatDate(entry.date)}</p>
+                                <p className="text-xs text-plant-gray mb-3">{formatDate(entry.created_at)}</p>
                                 <p className="text-sm text-plant-gray-dark line-clamp-2">{entry.content}</p>
                                 <div className="mt-4 flex items-center gap-2">
                                      <button onClick={() => onViewEntry(entry)} className="text-sm font-semibold text-plant-green hover:underline">View Details</button>
@@ -689,8 +695,8 @@ const StatisticsTab: React.FC<{ plants: Plant[] }> = ({ plants }) => {
         return next7Days.map(day => {
             let tasks = 0;
             plants.forEach(p => {
-                const nextWater = addDays(p.lastWatered, p.wateringFrequency);
-                const nextFertilize = addDays(p.lastFertilized, p.fertilizingFrequency);
+                const nextWater = addDays(p.last_watered, p.watering_frequency);
+                const nextFertilize = addDays(p.last_fertilized, p.fertilizing_frequency);
                 if (nextWater.toDateString() === day.toDateString()) tasks++;
                 if (nextFertilize.toDateString() === day.toDateString()) tasks++;
             });
@@ -765,7 +771,7 @@ const DashboardSkeleton: React.FC = () => (
     </div>
 );
 
-const Dashboard: React.FC<DashboardProps> = ({ onLogout, token }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onLogout, token, user }) => {
     const [activeTab, setActiveTab] = useState('My Plants');
     const [isAddPlantModalOpen, setAddPlantModalOpen] = useState(false);
     const [plants, setPlants] = useState<Plant[]>([]);
@@ -842,10 +848,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, token }) => {
     const handleUpdatePlantActivity = async (plantId: Plant['id'], activity: 'water' | 'fertilize' | 'groom') => {
         const originalPlants = plants;
         const today = new Date().toISOString();
-        const activityKey = `last${activity.charAt(0).toUpperCase() + activity.slice(1)}ed` as keyof Plant;
+        
+        const activityKeyMap = {
+            water: 'last_watered',
+            fertilize: 'last_fertilized',
+            groom: 'last_groomed'
+        };
+        const activityKey = activityKeyMap[activity] as keyof Plant;
+
         setPlants(currentPlants =>
             currentPlants.map(p => p.id === plantId ? { ...p, [activityKey]: today } : p)
         );
+
         try {
             const updatedPlant = await updatePlantActivity(plantId, activity, token);
             setPlants(currentPlants => currentPlants.map(p => p.id === plantId ? updatedPlant : p));
@@ -904,7 +918,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, token }) => {
         today.setHours(0, 0, 0, 0);
 
         const totalPlants = plants.length;
-        const needsWaterCount = plants.filter(p => addDays(p.lastWatered, p.wateringFrequency) <= today).length;
+        const needsWaterCount = plants.filter(p => addDays(p.last_watered, p.watering_frequency) <= today).length;
         const healthyCount = plants.filter(p => p.health === 'healthy').length;
         const needsAttentionCount = plants.filter(p => p.health === 'attention').length;
 
@@ -935,7 +949,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, token }) => {
         // 1. Main Stat Filter (from activeFilter)
         switch (activeFilter) {
             case 'Need Water':
-                filtered = plants.filter(p => addDays(p.lastWatered, p.wateringFrequency) <= today);
+                filtered = plants.filter(p => addDays(p.last_watered, p.watering_frequency) <= today);
                 break;
             case 'Healthy':
                 filtered = plants.filter(p => p.health === 'healthy');
@@ -948,7 +962,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, token }) => {
                 break;
         }
 
-        if (searchTerm) filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.scientificName.toLowerCase().includes(searchTerm.toLowerCase()));
+        if (searchTerm) filtered = filtered.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.scientific_name.toLowerCase().includes(searchTerm.toLowerCase()));
         if (locationFilter !== 'all') filtered = filtered.filter(p => p.location === locationFilter);
         if (lightFilter !== 'all') filtered = filtered.filter(p => p.light === lightFilter);
 
@@ -957,8 +971,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, token }) => {
                 case 'name-asc': return a.name.localeCompare(b.name);
                 case 'name-desc': return b.name.localeCompare(a.name);
                 case 'next-watering':
-                    const nextA = addDays(a.lastWatered, a.wateringFrequency).getTime();
-                    const nextB = addDays(b.lastWatered, b.wateringFrequency).getTime();
+                    const nextA = addDays(a.last_watered, a.watering_frequency).getTime();
+                    const nextB = addDays(b.last_watered, b.watering_frequency).getTime();
                     return nextA - nextB;
                 default: return 0;
             }
@@ -972,6 +986,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, token }) => {
         { name: 'Statistics', icon: <ChartIcon className="h-5 w-5 mr-2" /> },
         { name: 'AI Assistant', icon: <AiIcon className="h-5 w-5 mr-2" /> },
     ];
+    
+    const userName = user.user_metadata.fullname || user.email?.split('@')[0] || 'Plant Parent';
+    const userInitials = (user.user_metadata.fullname || user.email || 'PP')
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase();
 
     const renderActiveTabContent = () => {
         if (isLoading) return <DashboardSkeleton />;
@@ -1035,7 +1057,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, token }) => {
                         <LogoIcon className="h-8 w-8 text-plant-green" />
                         <div>
                             <h1 className="text-xl font-bold text-plant-dark">Plant Pal</h1>
-                            <p className="text-sm text-plant-gray-dark">Welcome back, Pratik Patil!</p>
+                            <p className="text-sm text-plant-gray-dark">Welcome back, {userName}!</p>
                         </div>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -1046,7 +1068,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, token }) => {
                         <button onClick={onLogout} className="font-semibold text-plant-gray-dark hover:text-plant-green">Logout</button>
                         <div className="relative">
                             <button className="h-10 w-10 bg-green-100 text-plant-green-dark font-bold rounded-full flex items-center justify-center">
-                                PP
+                                {userInitials}
                             </button>
                         </div>
                     </div>

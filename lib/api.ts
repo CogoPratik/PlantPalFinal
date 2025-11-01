@@ -47,14 +47,22 @@ export const signIn = (credentials: { email: string; password: string }) =>
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
-    }).then(res => res.ok ? res.json() : Promise.reject(res.json()));
+    }).then(async res => {
+        if (res.ok) return res.json();
+        const error = await res.json();
+        return Promise.reject(error);
+    });
 
 export const signUp = (userData: { fullname: string, email: string; password: string }) => 
     fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
-    }).then(res => res.ok ? res.json() : Promise.reject(res.json()));
+    }).then(async res => {
+        if (res.ok) return res.json();
+        const error = await res.json();
+        return Promise.reject(error);
+    });
 
 // --- Plants API ---
 export const getPlants = (token: string): Promise<Plant[]> => 
@@ -63,7 +71,7 @@ export const getPlants = (token: string): Promise<Plant[]> =>
 export const addPlant = (plantData: FormData, token: string): Promise<Plant> => 
     apiRequest('/plants', 'POST', token, plantData);
 
-export const updatePlant = (id: Plant['id'], plantData: Plant, token: string): Promise<Plant> =>
+export const updatePlant = (id: Plant['id'], plantData: Partial<Plant>, token: string): Promise<Plant> =>
     apiRequest(`/plants/${id}`, 'PUT', token, plantData);
 
 export const deletePlant = (id: Plant['id'], token: string): Promise<null> =>

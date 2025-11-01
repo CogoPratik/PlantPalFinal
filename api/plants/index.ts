@@ -1,55 +1,87 @@
-
-import { mockPlants } from '../_data';
+import { supabase } from '../../lib/supabase';
+import { withAuth } from '../../lib/auth';
 
 export const config = {
   runtime: 'edge',
 };
 
-export default async function handler(req: Request) {
-  const { method } = req;
+const handler = async (req: Request, context: { userId: string }) => {
+    const { userId } = context;
+    const { method } = req;
 
-  switch (method) {
-    case 'GET':
-      try {
-        // Simulate a network delay
-        await new Promise(res => setTimeout(res, 500));
-        return new Response(JSON.stringify(mockPlants), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      } catch (error) {
-        return new Response(JSON.stringify({ message: 'Error fetching plants' }), { status: 500 });
-      }
+    switch (method) {
+        case 'GET':
+            try {
+                const { data, error } = await supabase
+                    .from('plants')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false });
 
-    case 'POST':
-      try {
-        const formData = await req.formData();
-        const newPlantData: any = {};
-        formData.forEach((value, key) => {
-            newPlantData[key] = value;
-        });
+                if (error) throw error;
+                return new Response(JSON.stringify(data), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' },
+                });
+            } catch (error: any) {
+                return new Response(JSON.stringify({ message: error.message }), { status: 500 });
+            }
 
-        const newPlant = {
-            ...newPlantData,
-            id: Date.now(), // simple unique ID
-            image: 'https://picsum.photos/id/1025/500/600', // Mock image
-            health: 'healthy',
-            lastWatered: new Date().toISOString(),
-            lastFertilized: new Date().toISOString(),
-            lastGroomed: new Date().toISOString(),
-        };
-        
-        mockPlants.unshift(newPlant as any); // Add to the start of the list
+        case 'POST':
+            try {
+                const formData = await req.formData();
+                const plantData: any = {};
+                formData.forEach((value, key) => {
+                    if (key !== 'photo') {
+                        plantData[key] = value;
+                    }
+                });
+                
+                const photo = formData.get('photo') as File | null;
+                let imageUrl = 'https://picsum.photos/id/1025/500/600'; // Default image
 
-        return new Response(JSON.stringify(newPlant), {
-          status: 201,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      } catch (error) {
-        return new Response(JSON.stringify({ message: 'Error adding plant' }), { status: 500 });
-      }
+                if (photo) {
+                    const filePath = `${userId}/${Date.now()}-${photo.name}`;
+                    const { error: uploadError } = await supabase.storage
+                        .from('plant-images')
+                        .upload(filePath, photo);
+                    
+                    if (uploadError) throw uploadError;
 
-    default:
-      return new Response('Method Not Allowed', { status: 405 });
-  }
-}
+                    const { data: urlData } = supabase.storage
+                        .from('plant-images')
+                        .getPublicUrl(filePath);
+                    
+                    imageUrl = urlData.publicUrl;
+                }
+
+                const newPlantPayload = {
+                    ...plantData,
+                    user_id: userId,
+                    image_url: imageUrl,
+                    watering_frequency: parseInt(plantData.watering_frequency, 10),
+                    fertilizing_frequency: parseInt(plantData.fertilizing_frequency, 10),
+                };
+
+                const { data: newPlant, error: insertError } = await supabase
+                    .from('plants')
+                    .insert(newPlantPayload)
+                    .select()
+                    .single();
+
+                if (insertError) throw insertError;
+
+                return new Response(JSON.stringify(newPlant), {
+                    status: 201,
+                    headers: { 'Content-Type': 'application/json' },
+                });
+            } catch (error: any) {
+                return new Response(JSON.stringify({ message: error.message }), { status: 500 });
+            }
+
+        default:
+            return new Response('Method Not Allowed', { status: 405 });
+    }
+};
+
+export default withAuth(handler);
