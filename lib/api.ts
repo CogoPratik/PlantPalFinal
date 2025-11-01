@@ -42,19 +42,35 @@ const apiRequest = async (endpoint: string, method: 'GET' | 'POST' | 'PUT' | 'DE
 };
 
 // --- Authentication API ---
-export const signIn = (credentials: { email: string; password: string }) => 
-    fetch(`${API_BASE_URL}/auth/signin`, {
+export const signIn = async (credentials: { email: string; password: string }) => {
+    const response = await fetch(`${API_BASE_URL}/auth/signin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
-    }).then(res => res.ok ? res.json() : Promise.reject(res.json()));
+    });
 
-export const signUp = (userData: { fullname: string, email: string; password: string }) => 
-    fetch(`${API_BASE_URL}/auth/signup`, {
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to authenticate. Please try again.' }));
+        throw new Error(errorData.message || 'Failed to authenticate. Please try again.');
+    }
+
+    return response.json();
+};
+
+export const signUp = async (userData: { fullname: string, email: string; password: string }) => {
+    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
-    }).then(res => res.ok ? res.json() : Promise.reject(res.json()));
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to create account. Please try again.' }));
+        throw new Error(errorData.message || 'Failed to create account. Please try again.');
+    }
+
+    return response.json();
+};
 
 // --- Plants API ---
 export const getPlants = (token: string): Promise<Plant[]> => 
