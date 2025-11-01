@@ -1,8 +1,7 @@
-
 import { Plant } from "../../components/Dashboard";
 
 export const config = {
-  runtime: 'nodejs',
+  runtime: 'edge',
 };
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
