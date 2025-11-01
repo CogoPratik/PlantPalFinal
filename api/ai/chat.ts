@@ -33,14 +33,19 @@ export default async function handler(req: Request) {
     const ai = new GoogleGenAI({ apiKey });
     
     // Format history for the chat model
-    const chatHistory = history.map((msg: { role: 'user' | 'model', text: string }) => ({
+    const chatHistoryPayload = history.map((msg: { role: 'user' | 'model', text: string }) => ({
         role: msg.role,
         parts: [{ text: msg.text }],
     }));
 
+    // The history must start with a user turn. If the first message is from the model, remove it.
+    if (chatHistoryPayload.length > 0 && chatHistoryPayload[0].role === 'model') {
+        chatHistoryPayload.shift();
+    }
+
     const chat = ai.chats.create({
       model: 'gemini-2.5-flash',
-      history: chatHistory,
+      history: chatHistoryPayload,
     });
     
     const result = await chat.sendMessage({ message: latestUserMessage.text });
