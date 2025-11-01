@@ -43,30 +43,42 @@ const apiRequest = async (endpoint: string, method: 'GET' | 'POST' | 'PUT' | 'DE
 
 // --- Authentication API ---
 export const signIn = async (credentials: { email: string; password: string }) => {
-    const response = await fetch(`${API_BASE_URL}/auth/signin`, {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/auth-signin`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+        },
         body: JSON.stringify(credentials),
     });
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to authenticate. Please try again.' }));
-        throw new Error(errorData.message || 'Failed to authenticate. Please try again.');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to authenticate. Please try again.' }));
+        throw new Error(errorData.error || 'Failed to authenticate. Please try again.');
     }
 
     return response.json();
 };
 
 export const signUp = async (userData: { fullname: string, email: string; password: string }) => {
-    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/auth-signup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+        },
         body: JSON.stringify(userData),
     });
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to create account. Please try again.' }));
-        throw new Error(errorData.message || 'Failed to create account. Please try again.');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to create account. Please try again.' }));
+        throw new Error(errorData.error || 'Failed to create account. Please try again.');
     }
 
     return response.json();
