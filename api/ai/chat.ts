@@ -1,21 +1,41 @@
+import { GoogleGenAI, Chat } from "@google/genai";
 
 export const config = {
-  runtime: 'edge',
+  runtime: 'nodejs',
 };
+
+// IMPORTANT: Set the API_KEY in your Vercel project settings
+const ai = new GoogleGenAI({apiKey: process.env.API_KEY as string});
 
 export default async function handler(req: Request) {
   if (req.method === 'POST') {
-    const { prompt } = await req.json();
-    await new Promise(res => setTimeout(res, 1000)); // Simulate AI thinking
-    
-    const mockResponse = `This is a mock AI response for your question: **"${prompt}"**. 
-    
-In a real application, I would provide a detailed, helpful answer about plant care. For example, if you asked about yellow leaves, I might suggest checking your watering schedule, light conditions, or for potential pests.`;
-    
-    return new Response(JSON.stringify({ response: mockResponse }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    try {
+      const { prompt, history } = await req.json();
+
+      if (!prompt) {
+        return new Response(JSON.stringify({ error: 'Prompt is required' }), { status: 400 });
+      }
+
+      const chat: Chat = ai.chats.create({
+        model: 'gemini-2.5-flash',
+        history: history.slice(0, -1).map((msg: any) => ({ // Remove the last user message from history
+            role: msg.role === 'model' ? 'model' : 'user',
+            parts: [{ text: msg.text }],
+        })),
+      });
+
+      const result = await chat.sendMessage({ message: prompt });
+      const response = result.text;
+      
+      return new Response(JSON.stringify({ response }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    } catch (error: any) {
+      console.error(error);
+      return new Response(JSON.stringify({ error: 'Failed to fetch response from Gemini API', details: error.message }), { status: 500 });
+    }
   }
   return new Response('Method Not Allowed', { status: 405 });
 }

@@ -1,19 +1,35 @@
+import { GoogleGenAI } from "@google/genai";
 
 export const config = {
-  runtime: 'edge',
+  runtime: 'nodejs',
 };
+
+// IMPORTANT: Set the API_KEY in your Vercel project settings
+const ai = new GoogleGenAI({apiKey: process.env.API_KEY as string});
 
 export default async function handler(req: Request) {
   if (req.method === 'POST') {
-    const { name } = await req.json();
-    await new Promise(res => setTimeout(res, 800)); // Simulate AI thinking
+    try {
+        const { name, scientificName } = await req.json();
+        
+        const prompt = `Give a concise fertilizer suggestion for a ${name} (${scientificName}). Recommend a suitable NPK ratio and a feeding schedule for its growing season. Keep the response under 50 words.`;
 
-    const suggestion = `For a ${name}, a balanced liquid fertilizer with a 20-20-20 NPK ratio is a great choice. Dilute it to half-strength and apply every 4-6 weeks during the spring and summer growing season. Avoid fertilizing in the fall and winter.`;
-    
-    return new Response(JSON.stringify({ suggestion }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+
+        const suggestion = response.text;
+        
+        return new Response(JSON.stringify({ suggestion }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+
+    } catch(error: any) {
+        console.error("Error getting fertilizer suggestion:", error);
+        return new Response(JSON.stringify({ error: 'Failed to get suggestion', details: error.message }), { status: 500 });
+    }
   }
   return new Response('Method Not Allowed', { status: 405 });
 }
