@@ -18,16 +18,13 @@ export default async function handler(req: Request) {
   }
 
   try {
-    const { history } = await req.json();
+    const { prompt, history } = await req.json();
 
-    if (!history) {
-      return new Response(JSON.stringify({ error: 'History is required' }), { status: 400 });
+    if (!prompt) {
+      return new Response(JSON.stringify({ error: 'Prompt is required' }), { status: 400 });
     }
-
-    // The last item in history is the new prompt
-    const latestUserMessage = history.pop();
-    if (!latestUserMessage || latestUserMessage.role !== 'user') {
-      return new Response(JSON.stringify({ error: 'Invalid prompt structure' }), { status: 400 });
+    if (!history) {
+        return new Response(JSON.stringify({ error: 'History is required' }), { status: 400 });
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -48,7 +45,7 @@ export default async function handler(req: Request) {
       history: chatHistoryPayload,
     });
     
-    const result = await chat.sendMessage({ message: latestUserMessage.text });
+    const result = await chat.sendMessage({ message: prompt });
 
     return new Response(JSON.stringify({ response: result.text }), {
       status: 200,

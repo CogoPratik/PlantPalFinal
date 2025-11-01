@@ -45,13 +45,15 @@ const AiAssistant: React.FC<AiAssistantProps> = ({ token }) => {
         const question = messageText || currentQuestion;
         if (!question.trim() || isChatLoading) return;
 
-        const newHistory: ChatMessage[] = [...chatHistory, { role: 'user', text: question }];
-        setChatHistory(newHistory);
+        const historyForApi = [...chatHistory];
+        const newUiHistory: ChatMessage[] = [...historyForApi, { role: 'user', text: question }];
+        
+        setChatHistory(newUiHistory);
         if (!messageText) setCurrentQuestion('');
         setIsChatLoading(true);
 
         try {
-            const { response } = await askAiChat(question, newHistory, token);
+            const { response } = await askAiChat(question, historyForApi, token);
             setChatHistory(prev => [...prev, { role: 'model', text: response }]);
         } catch (error) {
             console.error("Error calling backend chat API:", error);
