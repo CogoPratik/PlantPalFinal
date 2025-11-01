@@ -1,62 +1,42 @@
-import { supabase } from '../../lib/supabase';
-import { withAuth } from '../../lib/auth';
+import { mockPlants } from '../_data';
 
 export const config = {
   runtime: 'edge',
 };
 
-const handler = async (req: Request, context: { userId: string }) => {
-    const { userId } = context;
+export default async function handler(req: Request) {
     const { method } = req;
     const url = new URL(req.url);
-    const id = url.pathname.split('/').pop();
+    const id = parseInt(url.pathname.split('/').pop() || '', 10);
 
-    if (!id) {
-        return new Response(JSON.stringify({ message: 'Plant ID is required' }), { status: 400 });
+    const plantIndex = mockPlants.findIndex(p => p.id === id);
+
+    if (plantIndex === -1) {
+        return new Response(JSON.stringify({ message: 'Plant not found' }), { status: 404 });
     }
 
     switch (method) {
         case 'PUT':
             try {
                 const updatedData = await req.json();
-                // Ensure user_id isn't being changed
-                delete updatedData.user_id;
-                delete updatedData.id;
-
-                const { data, error } = await supabase
-                    .from('plants')
-                    .update(updatedData)
-                    .eq('id', id)
-                    .eq('user_id', userId)
-                    .select()
-                    .single();
-
-                if (error) throw error;
-                return new Response(JSON.stringify(data), {
+                mockPlants[plantIndex] = { ...mockPlants[plantIndex], ...updatedData };
+                return new Response(JSON.stringify(mockPlants[plantIndex]), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' },
                 });
-            } catch (error: any) {
-                return new Response(JSON.stringify({ message: error.message }), { status: 500 });
+            } catch (error) {
+                return new Response(JSON.stringify({ message: 'Error updating plant' }), { status: 500 });
             }
 
         case 'DELETE':
             try {
-                const { error } = await supabase
-                    .from('plants')
-                    .delete()
-                    .eq('id', id)
-                    .eq('user_id', userId);
-
-                if (error) throw error;
+                mockPlants.splice(plantIndex, 1);
                 return new Response(null, { status: 204 });
-            } catch (error: any) {
-                return new Response(JSON.stringify({ message: error.message }), { status: 500 });
+            } catch (error) {
+                return new Response(JSON.stringify({ message: 'Error deleting plant' }), { status: 500 });
             }
 
         default:
             return new Response('Method Not Allowed', { status: 405 });
     }
-};
-
-export default withAuth(handler);
+}

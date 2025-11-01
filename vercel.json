@@ -1,7 +1,1 @@
-
-{
-  "env": {
-    "SUPABASE_URL": "https://umizyfhesmhwrlwupeuz.supabase.co",
-    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtaXp5Zmhlc21od3Jsd3VwZXV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5ODg2NzIsImV4cCI6MjA3NzU2NDY3Mn0.NJRR7_d9B7h0A9iZJ_C-oXLSDxtH6G-owdk3JKWEyRM"
-  }
-}
+{}

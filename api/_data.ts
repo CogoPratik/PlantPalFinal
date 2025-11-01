@@ -1,6 +1,86 @@
-import { Article } from "../components/Dashboard";
 
-export const mockArticles: Article[] = [
+import { Plant, JournalEntry, Article } from "../components/Dashboard";
+
+// Using a let binding so the arrays can be mutated by the API functions
+export let mockPlants: Plant[] = [
+    {
+        id: 1,
+        name: 'Monstera Deliciosa',
+        scientificName: 'Monstera deliciosa',
+        image: 'https://picsum.photos/id/106/500/600',
+        light: 'Medium',
+        health: 'healthy',
+        location: 'Living Room',
+        wateringFrequency: 7,
+        lastWatered: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        fertilizingFrequency: 30,
+        lastFertilized: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        groomingFrequency: 60,
+        lastGroomed: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+        sunlight: 'Bright, indirect light',
+        humidity: 'Medium Humidity',
+        notes: 'Loves to be misted occasionally. Check for new leaves unfurling!',
+        fertilizerDetails: 'Use a balanced liquid fertilizer (20-20-20) every 4 weeks during the growing season.'
+    },
+    {
+        id: 2,
+        name: 'Snake Plant',
+        scientificName: 'Dracaena trifasciata',
+        image: 'https://picsum.photos/id/152/500/600',
+        light: 'Low',
+        health: 'healthy',
+        location: 'Bedroom',
+        wateringFrequency: 21,
+        lastWatered: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+        fertilizingFrequency: 90,
+        lastFertilized: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString(),
+        groomingFrequency: 120,
+        lastGroomed: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString(),
+        sunlight: 'Low to bright, indirect light',
+        humidity: 'Low Humidity',
+        notes: 'Very resilient. Almost impossible to kill. Water sparingly.',
+    },
+    {
+        id: 3,
+        name: 'Fiddle Leaf Fig',
+        scientificName: 'Ficus lyrata',
+        image: 'https://picsum.photos/id/206/500/600',
+        light: 'Bright',
+        health: 'attention',
+        location: 'Office',
+        wateringFrequency: 10,
+        lastWatered: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+        fertilizingFrequency: 30,
+        lastFertilized: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+        groomingFrequency: 45,
+        lastGroomed: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        sunlight: 'Bright, consistent light',
+        humidity: 'High Humidity',
+        notes: 'A bit fussy. Avoid moving it and keep away from drafts. Leaves have some brown spots.',
+    }
+];
+
+export let mockJournalEntries: JournalEntry[] = [
+    {
+        id: 1,
+        title: "Repotted the Monstera!",
+        content: "Finally moved the Monstera to a larger pot. The roots were looking really healthy. Used a mix of potting soil, perlite, and orchid bark. Watered it thoroughly after repotting.",
+        date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+        id: 2,
+        title: "First Flower on the Orchid",
+        content: "Woke up this morning to see the first bloom on the Phalaenopsis orchid. It's a beautiful white and purple flower. So exciting!",
+        date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        file: {
+            name: "orchid_bloom.jpg",
+            type: "image",
+            url: "https://picsum.photos/id/1027/400/300"
+        }
+    }
+];
+
+export let mockArticles: Article[] = [
     {
         id: 1,
         title: "The Ultimate Guide to Watering Your Houseplants",
