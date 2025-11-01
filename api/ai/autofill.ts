@@ -2,16 +2,11 @@
 import { Plant } from "../../components/Dashboard";
 
 export const config = {
-  runtime: 'edge',
+  runtime: 'nodejs',
 };
 
-// WARNING: Hardcoding API keys is not secure.
-// This key is provided for demonstration purposes based on the user's request.
-// For production, it's highly recommended to use environment variables.
-const OPENROUTER_API_KEY = "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";
-const API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
-// Helper to convert stream to Uint8Array
 async function streamToUint8Array(stream: ReadableStream): Promise<Uint8Array> {
     const reader = stream.getReader();
     const chunks: Uint8Array[] = [];
@@ -20,6 +15,7 @@ async function streamToUint8Array(stream: ReadableStream): Promise<Uint8Array> {
         if (done) break;
         chunks.push(value);
     }
+    
     const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
     const result = new Uint8Array(totalLength);
     let offset = 0;
@@ -30,7 +26,6 @@ async function streamToUint8Array(stream: ReadableStream): Promise<Uint8Array> {
     return result;
 }
 
-// Helper to convert Uint8Array to Base64
 function uint8ArrayToBase64(bytes: Uint8Array): string {
     let binary = '';
     const len = bytes.byteLength;
@@ -41,6 +36,13 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
 }
 
 export default async function handler(req: Request) {
+  if (!OPENROUTER_API_KEY) {
+    return new Response(JSON.stringify({ error: 'OpenRouter API key not configured. Please set OPENROUTER_API_KEY environment variable.' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   if (req.method === 'POST') {
     try {
         const formData = await req.formData();
@@ -53,39 +55,41 @@ export default async function handler(req: Request) {
         const imageBytes = await streamToUint8Array(imageFile.stream());
         const base64Image = uint8ArrayToBase64(imageBytes);
         const mimeType = imageFile.type;
-        const dataUri = `data:${mimeType};base64,${base64Image}`;
+        const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-        const promptText = `Based on this image of a plant, provide care details. Respond with a JSON object containing: scientificName (string), wateringFrequency (integer, in days), fertilizingFrequency (integer, in days), sunlight (enum: "Low Light", "Medium Light", "Bright Light"), humidity (enum: "Low Humidity", "Medium Humidity", "High Humidity"), and notes (string, a brief care tip).`;
+        const prompt = `Based on this image of a plant, provide care details as a JSON object. The JSON object must have the following keys: "scientificName" (string), "wateringFrequency" (integer, in days), "fertilizingFrequency" (integer, in days), "sunlight" (string, one of "Low Light", "Medium Light", "Bright Light"), "humidity" (string, one of "Low Humidity", "Medium Humidity", "High Humidity"), and "notes" (string, a brief care tip).`;
 
-        const response = await fetch(API_URL, {
-            method: 'POST',
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
             headers: {
-                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://plantpal.ai',
-                'X-Title': 'Plant Pal',
+              "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://plantpal.vercel.app",
+              "X-Title": "Plant Pal",
             },
             body: JSON.stringify({
-                model: 'google/gemini-flash-1.5',
-                messages: [{
-                    role: 'user',
-                    content: [
-                        { type: 'text', text: promptText },
-                        { type: 'image_url', image_url: { url: dataUri } }
-                    ]
-                }],
-                response_format: { "type": "json_object" }
-            }),
+              "model": "google/gemini-2.0-flash-exp:free",
+              "response_format": { "type": "json_object" },
+              "messages": [
+                {
+                  "role": "user",
+                  "content": [
+                    { "type": "text", "text": prompt },
+                    { "type": "image_url", "image_url": { "url": dataUrl } }
+                  ]
+                }
+              ]
+            })
         });
 
-        if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`OpenRouter API responded with status ${response.status}: ${errorBody}`);
+        if (!res.ok) {
+            const errorBody = await res.text();
+            console.error(`OpenRouter API error: ${res.statusText}`, errorBody);
+            throw new Error(`OpenRouter API error: ${res.statusText}`);
         }
-
-        const completion = await response.json();
-        const resultText = completion.choices[0].message.content;
-        const details: Partial<Plant> = JSON.parse(resultText);
+        
+        const data = await res.json();
+        const details: Partial<Plant> = JSON.parse(data.choices[0].message.content);
 
         return new Response(JSON.stringify(details), {
             status: 200,
